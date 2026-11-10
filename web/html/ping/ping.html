@@ -1,0 +1,1121 @@
+<html>
+<head>
+    <title>Ping911</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="/assets/favicon.ico">
+    <link rel="stylesheet" href="/assets/lib/element-ui/index.css">
+    <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+<div id="lb-lightsail">
+    <el-form :model="query" @submit.native.prevent style="margin: 16px 12px 0 12px;">
+        <el-row :gutter="10" type="flex" justify="space-between" style="margin-bottom: 8px;">
+            <el-col :xs="8" :sm="6" :md="4" :lg="3" :xl="2" style="text-align: left; width: 120px;">
+                <img src="/assets/images/logo.png" alt="Ping911"
+                     style="height: 30px; vertical-align: middle; cursor: pointer;">
+            </el-col>
+            <el-col :xs="8" :sm="6" :md="4" :lg="3" :xl="2" style="text-align: right;">
+                <el-dropdown trigger="click" @command="handleMenuCommand" popper-class="header-menu-dropdown">
+                    <el-button size="mini" icon="el-icon-menu" class="header-menu-btn"></el-button>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item class="theme-switch-item">
+                            <div class="theme-switch-row" @click.stop>
+                                <span>主题</span>
+                                <el-switch :value="isDarkMode" @change="toggleTheme"></el-switch>
+                            </div>
+                        </el-dropdown-item>
+                        <el-dropdown-item class="theme-switch-item">
+                            <div class="theme-switch-row" @click.stop>
+                                <span>自动刷新</span>
+                                <el-switch :value="autoRefreshEnabled" @change="toggleAutoRefresh"></el-switch>
+                            </div>
+                        </el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+            </el-col>
+        </el-row>
+
+        <el-row :gutter="8" type="flex" justify="center">
+            <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
+                <el-input v-model="query.keyword" placeholder="请输入实例ID或公网IP" clearable
+                          @keyup.enter.native="search">
+                </el-input>
+            </el-col>
+        </el-row>
+
+        <el-row v-if="isAdmin == 'false'" :gutter="8" type="flex" justify="center" style="margin-top: 8px;">
+            <el-col :xs="12" :sm="7" :md="8" :lg="9" :xl="10">
+                <el-input v-model="query.remark" placeholder="请输入备注" clearable @keyup.enter.native="search">
+                </el-input>
+            </el-col>
+            <el-col :xs="12" :sm="5" :md="4" :lg="3" :xl="2">
+                <el-button type="primary" style="width: 100%" @click="search">查询</el-button>
+            </el-col>
+        </el-row>
+
+        <el-row v-if="isAdmin == 'true'" :gutter="8" type="flex" justify="center" style="margin-top: 8px;">
+            <el-col :xs="12" :sm="6" :md="6" :lg="6" :xl="6">
+                <el-input v-model="query.remark" placeholder="请输入备注" clearable @keyup.enter.native="search">
+                </el-input>
+            </el-col>
+            <el-col :xs="12" :sm="6" :md="6" :lg="6" :xl="6">
+                <el-input v-model="query.groupName" placeholder="请输入分组" clearable @keyup.enter.native="search">
+                </el-input>
+            </el-col>
+        </el-row>
+
+        <el-row v-if="isAdmin == 'true'" :gutter="8" type="flex" justify="center" style="margin-top: 8px;">
+            <el-col :xs="12" :sm="6" :md="6" :lg="6" :xl="6">
+                <el-button type="primary" style="width: 100%" @click="search" icon="el-icon-search">查询</el-button>
+            </el-col>
+            <el-col :xs="6" :sm="3" :md="3" :lg="3" :xl="3">
+                <el-button type="primary" style="width: 100%" plain :disabled="selectedIds.length === 0"
+                           icon="el-icon-download"
+                           @click="openBatchExportForm(false)">导出
+                </el-button>
+            </el-col>
+            <el-col :xs="6" :sm="3" :md="3" :lg="3" :xl="3">
+                <el-button type="primary" style="width: 100%" plain :disabled="selectedIds.length === 0"
+                           icon="el-icon-download"
+                           @click="openBatchExportForm(true)">面板
+                </el-button>
+            </el-col>
+        </el-row>
+
+        <el-row :gutter="10" type="flex" justify="center" style="margin-top: -8px;margin-bottom: -18px;">
+            <el-col v-if="isAdmin == 'false'" :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
+                <el-divider content-position="left">
+                    <div style="color: red;font-size: 12px">杜绝违法行为，一经发现，机器全杀，费用不退！</div>
+                </el-divider>
+                <el-divider content-position="left">续费V：haoyx1217&nbsp;|&nbsp;共：{{ total }}台</el-divider>
+            </el-col>
+
+            <el-col v-if="isAdmin == 'true'" :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
+                <el-divider content-position="center">共：{{ total }}台</el-divider>
+            </el-col>
+        </el-row>
+    </el-form>
+
+    <el-row v-for="(rowData, rowIndex) in chunkedDataList" :key="rowIndex" :gutter="10" style="margin: 10px 8px;">
+        <el-col v-for="data in rowData" :key="data.id" :xs="24" :sm="12" :md="8" :lg="6" :xl="6">
+            <el-card class="box-card" shadow="hover">
+                <div slot="header" class="clearfix card-header">
+                    <div class="card-header-left">
+                        <el-checkbox v-if="isAdmin === 'true'" :value="isSelected(data.id)"
+                                     @change="toggleSelect(data.id, $event)"></el-checkbox>
+                        <span class="card-title">#{{ data.id }}</span>
+                    </div>
+                    <el-tag :type="statusTagType(data)" size="mini">{{ statusLabel(data) }}</el-tag>
+                </div>
+
+                <div class="text item">
+                    <div>
+                        IP:
+                        <span v-if="data.publicIpAddress" class="copy-ip" @click="copyIp(data.publicIpAddress)">{{ data.publicIpAddress }}</span>
+                        <span v-else>--</span>
+                    </div>
+                    <div>IPv6: {{ data.ipv6Addresses || '--' }}</div>
+                    <div>区域: {{ getZoneName(data.displayName) }} | 配置: {{ data.peiZhi }}</div>
+                    <div>流量: {{ formatFlowGB(data.flowGb, data.bundleGb) || '-' }}</div>
+                    <div>系统: {{ data.systemName || '--' }}</div>
+                    <div>
+                        端口状态:
+                        <el-tag :type="data.isOpen === 1 ? 'success' : (data.isOpen === 0 ? 'info' : 'warning')" size="mini">
+                            {{ data.isOpen === 1 ? '已开启' : (data.isOpen === 0 ? '未开启' : '未知') }}
+                        </el-tag>
+                    </div>
+                    <div>换IP次数: {{ data.ipCount || 0 }}</div>
+                    <div v-if="isAdmin !== 'true' || !isFixOutTimeEditing(data.id)">
+                        到期时间: {{ formatDate(data.outTime) }}
+                        <el-button v-if="isAdmin === 'true'" type="text" size="mini"
+                                   @click="startFixOutTime(data)">修正</el-button>
+                    </div>
+                    <div v-if="isAdmin === 'true' && isFixOutTimeEditing(data.id)" class="fix-out-time-row">
+                        <span>到期时间:</span>
+                        <el-date-picker
+                                v-model="fixOutTimeValues[data.id]"
+                                type="datetime"
+                                value-format="yyyy-MM-dd HH:mm:ss"
+                                placeholder="可清空"
+                                size="mini"
+                                clearable>
+                        </el-date-picker>
+                        <el-button type="primary" size="mini" plain
+                                   :loading="fixOutTimeSavingIds.indexOf(data.id) >= 0"
+                                   @click="saveFixOutTime(data)">保存</el-button>
+                        <el-button size="mini" :disabled="fixOutTimeSavingIds.indexOf(data.id) >= 0"
+                                   @click="cancelFixOutTime(data)">取消</el-button>
+                    </div>
+                    <div v-if="isAdmin == 'false'">
+                        <div class="note-block">
+                            <span class="note-label">备注: </span>
+                            <el-input
+                                    v-model="data.remark"
+                                    show-word-limit
+                                    resize="none"
+                                    placeholder="请输入"
+                                    style="width: 158px;">
+                            </el-input>
+                            <el-button
+                                    type="primary"
+                                    size="mini"
+                                    plain
+                                    :loading="editRemarkIds.indexOf(data.id) >= 0"
+                                    @click="editRemark(data)"
+                                    style="margin-top: 6px;">
+                                更新
+                            </el-button>
+                        </div>
+                    </div>
+
+                    <div v-if="isAdmin === 'true'">备注: {{ data.remark || '--' }}</div>
+                    <div v-if="isAdmin === 'true'">分组: {{ data.groupName || '--' }}</div>
+                </div>
+                <el-row :gutter="10" type="flex" justify="left" style="margin-top: 8px">
+                    <el-col :span="24">
+                        <el-popconfirm
+                                class="action-popconfirm"
+                                title="确认重启该实例吗？"
+                                placement="top"
+                                @confirm="restart(data)">
+                            <el-button slot="reference" type="success" size="mini" plain icon="el-icon-refresh">重启
+                            </el-button>
+                        </el-popconfirm>
+                        <el-popconfirm
+                                class="action-popconfirm"
+                                title="确认更换该实例 IP 吗？"
+                                placement="top"
+                                @confirm="changeIp(data)">
+                            <el-button
+                                    slot="reference"
+                                    type="warning"
+                                    size="mini"
+                                    plain
+                                    icon="el-icon-refresh-left"
+                                    :disabled="isChangingIp(data)">换IP
+                            </el-button>
+                        </el-popconfirm>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="10" type="flex" justify="left" style="margin-top: 8px">
+                    <el-col :span="24">
+                        <a v-if="data.publicIpAddress"
+                           :href="'https://www.kk.yun/ping/' + data.publicIpAddress"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            <el-button type="primary" plain size="small">IP&nbsp;&nbsp;检测</el-button>
+                        </a>
+                        <el-popconfirm
+
+                                class="action-popconfirm"
+                                title="确认打开该实例端口吗？"
+                                placement="top"
+                                @confirm="openport(data)">
+                            <el-button slot="reference" :type="data.isOpen === 1 ? 'success' : 'primary'" size="mini" plain icon="el-icon-connection">端口
+                            </el-button>
+                        </el-popconfirm>
+                    </el-col>
+                </el-row>
+            </el-card>
+        </el-col>
+    </el-row>
+
+    <el-empty v-if="!loading && dataList.length === 0 && queryId" description="暂无数据"></el-empty>
+
+    <el-row v-if="dataList.length < total && windowWidth >= 768" style="margin: 20px 0; text-align: center;">
+        <el-button @click="loadMore" :loading="loading" type="primary" plain>
+            {{ loading ? '加载中...' : '加载更多' }}
+        </el-button>
+    </el-row>
+
+    <el-row v-if="loading && dataList.length < total && windowWidth < 768" style="margin: 20px 0; text-align: center;">
+        <div style="color: #409EFF; font-size: 14px;">
+            <i class="el-icon-loading" style="margin-right: 5px;"></i>
+            正在加载...
+        </div>
+    </el-row>
+
+    <el-row v-if="dataList.length > 0 && dataList.length >= total" style="margin: 20px 0; text-align: center;">
+        <span style="color: #999; font-size: 14px;">没有更多数据</span>
+    </el-row>
+
+    <el-button
+            v-show="showBackToTop"
+            @click="scrollToTop"
+            type="primary"
+            icon="el-icon-top"
+            size="mini"
+            class="back-to-top-btn">
+    </el-button>
+
+    <el-dialog v-if="isAdmin == 'true'" title="导出" :visible.sync="exportFormVisible" width="85%"
+               :close-on-click-modal="false" :close-on-press-escape="false">
+        <el-row>
+            <el-col :span="24">
+                <el-input id="exportTextarea" type="textarea" :rows="12" v-model="exportForm.remark"></el-input>
+            </el-col>
+        </el-row>
+        <div slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="exportLightsail">复制</el-button>
+            <el-button @click="exportFormVisible = false">关闭</el-button>
+        </div>
+    </el-dialog>
+</div>
+
+<script src="/assets/lib/vue/vue2.js"></script>
+<script src="/assets/lib/vue/sortable.min.js"></script>
+<script src="/assets/lib/axios/axios.js"></script>
+<script src="/assets/lib/element-ui/index.js"></script>
+<script src="/assets/utils/httpUtils.js"></script>
+<script src="/assets/utils/commonUtils.js"></script>
+
+<script>
+    new Vue({
+        el: '#lb-lightsail',
+        data: function () {
+            return {
+                activeName: '1',
+                queryId: '[[[.QueryID]]]',
+                isAdmin: '[[[.IsAdmin]]]',
+                query: {
+                    keyword: '',
+                    remark: '',
+                    groupName: '',
+                    limit: 8,
+                    offset: 0
+                },
+                zoneIds: {
+                    "virginia": "弗吉尼亚州",
+                    "ohio": "俄亥俄州",
+                    "oregon": "俄勒冈州",
+                    "ireland": "爱尔兰",
+                    "london": "伦敦",
+                    "paris": "巴黎",
+                    "frankfurt": "法兰克福",
+                    "singapore": "新加坡",
+                    "sydney": "悉尼",
+                    "tokyo": "东京",
+                    "seoul": "首尔",
+                    "mumbai": "孟买",
+                    "montreal": "蒙特利尔",
+                    "stockholm": "斯德哥尔摩",
+                    "jakarta": "雅加达",
+                    "hong kong": "香港",
+                    "ap-northeast-1": "东京",
+                    "ap-northeast-2": "首尔",
+                    "ap-northeast-3": "大阪",
+                    "ap-southeast-1": "新加坡",
+                    "ap-southeast-2": "悉尼",
+                    "ap-southeast-3": "雅加达",
+                    "ap-southeast-4": "墨尔本",
+                    "ap-southeast-5": "马来西亚",
+                    "ap-southeast-6": "新西兰",
+                    "ap-southeast-7": "泰国",
+                    "ap-south-1": "孟买",
+                    "ap-south-2": "海得拉巴",
+                    "ap-east-1": "香港",
+                    "ap-east-2": "台北",
+                    "us-east-1": "弗吉尼亚州",
+                    "us-east-2": "俄亥俄州",
+                    "us-west-1": "加利福尼亚州",
+                    "us-west-2": "俄勒冈州",
+                    "ca-central-1": "加拿大中部",
+                    "ca-west-1": "卡尔加里",
+                    "eu-west-1": "爱尔兰",
+                    "eu-west-2": "伦敦",
+                    "eu-west-3": "巴黎",
+                    "eu-central-1": "法兰克福",
+                    "eu-central-2": "苏黎世",
+                    "eu-north-1": "斯德哥尔摩",
+                    "eu-south-1": "米兰",
+                    "eu-south-2": "西班牙",
+                    "me-central-1": "阿联酋",
+                    "me-south-1": "巴林",
+                    "il-central-1": "特拉维夫",
+                    "sa-east-1": "圣保罗",
+                    "af-south-1": "开普敦",
+                    "mx-central-1": "墨西哥",
+                },
+                dataList: [],
+                total: 0,
+                loading: false,
+                windowWidth: window.innerWidth,
+                scrollThrottle: null,
+                showBackToTop: true,
+                isDarkMode: localStorage.getItem('darkMode') === 'true',
+                autoRefreshEnabled: localStorage.getItem('lbLightsailAutoRefresh') === 'true',
+                autoRefreshTimer: null,
+                selectedIds: [],
+                exportFormVisible: false,
+                exportForm: {
+                    remark: ''
+                },
+                fixOutTimeValues: {},
+                fixOutTimeEditingIds: [],
+                fixOutTimeSavingIds: [],
+                editRemarkIds: []
+            }
+        },
+        computed: {
+            chunkedDataList() {
+                const screenWidth = this.windowWidth;
+                let chunkSize = 4;
+                if (screenWidth < 768) {
+                    chunkSize = 1;
+                } else if (screenWidth < 992) {
+                    chunkSize = 2;
+                } else if (screenWidth < 1200) {
+                    chunkSize = 3;
+                }
+                const result = [];
+                for (let i = 0; i < this.dataList.length; i += chunkSize) {
+                    result.push(this.dataList.slice(i, i + chunkSize));
+                }
+                return result;
+            }
+        },
+        mounted() {
+            if (this.queryId) {
+                this.search();
+            }
+            window.addEventListener('resize', this.handleResize);
+            window.addEventListener('scroll', this.handleScroll, {passive: true});
+            window.addEventListener('touchmove', this.handleScroll, {passive: true});
+            this.syncAutoRefreshTimer();
+            if (this.isDarkMode) {
+                document.body.classList.add('dark-theme');
+            }
+        },
+        beforeDestroy() {
+            window.removeEventListener('resize', this.handleResize);
+            window.removeEventListener('scroll', this.handleScroll);
+            window.removeEventListener('touchmove', this.handleScroll);
+            if (this.scrollThrottle) {
+                clearTimeout(this.scrollThrottle);
+            }
+            this.clearAutoRefreshTimer();
+        },
+        methods: {
+            copyText(text) {
+                if (!text) {
+                    return Promise.reject(new Error('empty text'));
+                }
+                if (navigator.clipboard && window.isSecureContext) {
+                    return navigator.clipboard.writeText(text);
+                }
+                return new Promise((resolve, reject) => {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.setAttribute('readonly', 'readonly');
+                    textarea.style.position = 'fixed';
+                    textarea.style.top = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        const success = document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        if (success) {
+                            resolve();
+                        } else {
+                            reject(new Error('copy failed'));
+                        }
+                    } catch (err) {
+                        document.body.removeChild(textarea);
+                        reject(err);
+                    }
+                });
+            },
+            authConfig() {
+                return {
+                    headers: {
+                        Authorization: this.queryId
+                    }
+                };
+            },
+            buildQueryParams() {
+                const params = {
+                    offset: this.query.offset,
+                    limit: this.query.limit
+                };
+                params.keyword = (this.query.keyword || '').trim();
+                params.remark = (this.query.remark || '').trim();
+                params.groupName = (this.query.groupName || '').trim();
+                return params;
+            },
+            handleMenuCommand(command) {
+                if (command === 'home') {
+                    window.location.href = '/';
+                }
+            },
+            handleResize() {
+                this.windowWidth = window.innerWidth;
+            },
+            handleScroll() {
+                if (this.scrollThrottle) {
+                    clearTimeout(this.scrollThrottle);
+                }
+                this.scrollThrottle = setTimeout(() => {
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    const windowHeight = window.innerHeight;
+                    const documentHeight = document.documentElement.scrollHeight;
+                    this.showBackToTop = scrollTop > 120;
+                    if (scrollTop + windowHeight >= documentHeight - 150) {
+                        this.loadMore();
+                    }
+                }, 200);
+            },
+            scrollToTop() {
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            },
+            isSelected(id) {
+                return this.selectedIds.indexOf(id) >= 0;
+            },
+            toggleSelect(id, checked) {
+                if (checked) {
+                    if (this.selectedIds.indexOf(id) < 0) {
+                        this.selectedIds.push(id);
+                    }
+                    return;
+                }
+                this.selectedIds = this.selectedIds.filter(item => item !== id);
+            },
+            toggleTheme() {
+                this.isDarkMode = !this.isDarkMode;
+                localStorage.setItem('darkMode', this.isDarkMode.toString());
+                document.body.classList.toggle('dark-theme', this.isDarkMode);
+            },
+            toggleAutoRefresh(value) {
+                this.autoRefreshEnabled = value;
+                localStorage.setItem('lbLightsailAutoRefresh', value.toString());
+                this.syncAutoRefreshTimer();
+            },
+            syncAutoRefreshTimer() {
+                this.clearAutoRefreshTimer();
+                if (!this.autoRefreshEnabled || !this.queryId) {
+                    return;
+                }
+                this.autoRefreshTimer = setInterval(() => {
+                    if (!this.loading) {
+                        this.refreshSilently();
+                    }
+                }, 3000);
+            },
+            clearAutoRefreshTimer() {
+                if (this.autoRefreshTimer) {
+                    clearInterval(this.autoRefreshTimer);
+                    this.autoRefreshTimer = null;
+                }
+            },
+            refreshSilently() {
+                if (this.dataList.length === 0) {
+                    this.search();
+                    return;
+                }
+                this.dataPage(true, {
+                    silent: true,
+                    keepCurrentSize: true
+                });
+            },
+            formatFlowGB(flowGB, bundleGB) {
+                let s = parseFloat(flowGB).toFixed(2) + 'G';
+                return s + '/' + bundleGB;
+            },
+            getZoneName(zone) {
+                if (!zone) {
+                    return '';
+                }
+                const normalizedZone = String(zone).trim().toLowerCase();
+                const regionMatch = normalizedZone.match(/^([a-z]{2}(?:-[a-z]+)+-\d+)/);
+                const region = regionMatch ? regionMatch[1] : normalizedZone;
+                const zoneId = this.zoneIds[region];
+                return zoneId ? zoneId : zone;
+            },
+            search() {
+                if (!this.queryId) {
+                    return;
+                }
+                this.query.offset = 0;
+                this.dataList = [];
+                this.fixOutTimeValues = {};
+                this.fixOutTimeEditingIds = [];
+                this.dataPage(true);
+            },
+            loadMore() {
+                if (!this.queryId || this.loading || this.dataList.length >= this.total) {
+                    return;
+                }
+                this.query.offset = this.dataList.length;
+                this.dataPage(false);
+            },
+            dataPage(reset, options) {
+                const opts = options || {};
+                if (!opts.silent) {
+                    this.loading = true;
+                }
+                const params = this.buildQueryParams();
+                if (opts.keepCurrentSize) {
+                    params.offset = 0;
+                    params.limit = Math.max(this.dataList.length, this.query.limit || 8);
+                }
+                httpUtils.post('/lb/lightsail/page', params, this.authConfig()).then(resp => {
+                    const list = resp.data.list || [];
+                    this.initializeFixOutTimeValues(list);
+                    if (reset) {
+                        this.dataList = list;
+                    } else {
+                        this.dataList = this.dataList.concat(list);
+                    }
+                    this.selectedIds = this.selectedIds.filter(id => this.dataList.some(item => item.id === id));
+                    this.total = resp.data.total || 0;
+                    if (!opts.silent) {
+                        this.loading = false;
+                    }
+                    this.$nextTick(() => this.tryAutoLoadMore());
+                }).catch(() => {
+                    if (!opts.silent) {
+                        this.loading = false;
+                    }
+                });
+            },
+            tryAutoLoadMore() {
+                if (this.loading || this.dataList.length >= this.total) {
+                    return;
+                }
+                const documentHeight = document.documentElement.scrollHeight;
+                const windowHeight = window.innerHeight;
+                if (documentHeight <= windowHeight + 150) {
+                    this.loadMore();
+                }
+            },
+            statusLabel(row) {
+                return row.statusText || row.status || '-';
+            },
+            statusTagType(row) {
+                if (this.isChangingIp(row)) {
+                    return 'warning';
+                }
+                const status = (row.status || '').toLowerCase();
+                if (status === 'running' || status === 'normal' || status === 'enabled') {
+                    return 'success';
+                }
+                if (status === 'stopped' || status === 'disabled') {
+                    return 'info';
+                }
+                if (status === 'error' || status === 'failed') {
+                    return 'danger';
+                }
+                return 'primary';
+            },
+            isChangingIp(row) {
+                return row.changingIp === 1;
+            },
+            formatDate(value) {
+                if (!value) {
+                    return '-';
+                }
+                return formatDateTime(new Date(value), 'yyyy-MM-dd HH:mm');
+            },
+            copyIp(ip) {
+                this.copyText(ip).then(() => {
+                    this.$message.success('IP 已复制');
+                }).catch(() => {
+                    this.$message.error('复制失败，请手动复制');
+                });
+            },
+            openport(row) {
+                this.operate('/lb/lightsail/openport', row.id, '打开端口指令已发送');
+            },
+            restart(row) {
+                this.operate('/lb/lightsail/restart', row.id, '重启指令已发送');
+            },
+            changeIp(row) {
+                this.operate('/lb/lightsail/changeIp', row.id, '换 IP 指令已发送');
+            },
+            operate(url, id, successText) {
+                httpUtils.post(url, {id: id}, this.authConfig()).then(resp => {
+                    if (resp.data.statusCode !== '200') {
+                        this.$message.error(resp.data.message);
+                    } else {
+                        this.$message.success(successText);
+                        this.search();
+                    }
+                });
+            },
+            editRemark(row) {
+                if (this.editRemarkIds.indexOf(row.id) >= 0) {
+                    return;
+                }
+                this.editRemarkIds.push(row.id);
+                httpUtils.post('/lb/lightsail/editRemark', {
+                    id: row.id,
+                    remark: row.remark
+                }, this.authConfig()).then(resp => {
+                    if (resp.data.statusCode !== '200') {
+                        this.$message.error(resp.data.message);
+                    } else {
+                        this.$message.success("备注已经更新！");
+                    }
+                }).finally(() => {
+                    this.editRemarkIds = this.editRemarkIds.filter(id => id !== row.id);
+                });
+            },
+            initializeFixOutTimeValues(list) {
+                list.forEach(row => {
+                    if (!Object.prototype.hasOwnProperty.call(this.fixOutTimeValues, row.id)) {
+                        this.$set(this.fixOutTimeValues, row.id, row.outTime || null);
+                    }
+                });
+            },
+            isFixOutTimeEditing(id) {
+                return this.fixOutTimeEditingIds.indexOf(id) >= 0;
+            },
+            startFixOutTime(row) {
+                this.$set(this.fixOutTimeValues, row.id, row.outTime || null);
+                if (!this.isFixOutTimeEditing(row.id)) {
+                    this.fixOutTimeEditingIds.push(row.id);
+                }
+            },
+            cancelFixOutTime(row) {
+                this.$set(this.fixOutTimeValues, row.id, row.outTime || null);
+                this.fixOutTimeEditingIds = this.fixOutTimeEditingIds.filter(id => id !== row.id);
+            },
+            saveFixOutTime(row) {
+                if (this.fixOutTimeSavingIds.indexOf(row.id) >= 0) {
+                    return;
+                }
+                this.fixOutTimeSavingIds.push(row.id);
+                httpUtils.post('/lb/lightsail/fixOutTime', {
+                    id: row.id,
+                    outTime: this.fixOutTimeValues[row.id] || null
+                }, this.authConfig()).then(resp => {
+                    if (resp.data.statusCode !== '200') {
+                        this.$message.error(resp.data.message);
+                        return;
+                    }
+                    return this.refreshFixOutTimeRow(row).then(() => {
+                        this.$message.success('修正过期时间已保存');
+                    }).catch(error => {
+                        this.$message.warning('保存成功，但记录刷新失败：' + error.message);
+                    });
+                }).finally(() => {
+                    this.fixOutTimeSavingIds = this.fixOutTimeSavingIds.filter(id => id !== row.id);
+                });
+            },
+            refreshFixOutTimeRow(row) {
+                return httpUtils.post('/lb/lightsail/detail', {
+                    id: row.id
+                }, this.authConfig()).then(resp => {
+                    if (resp.data.statusCode !== '200' || !resp.data.data) {
+                        throw new Error(resp.data.message || '找不到该记录');
+                    }
+                    const refreshedRow = resp.data.data;
+                    const rowIndex = this.dataList.findIndex(item => item.id === row.id);
+                    if (rowIndex >= 0) {
+                        this.$set(this.dataList, rowIndex, refreshedRow);
+                    }
+                    this.$set(this.fixOutTimeValues, row.id, refreshedRow.outTime || null);
+                    this.fixOutTimeEditingIds = this.fixOutTimeEditingIds.filter(id => id !== row.id);
+                });
+            },
+            checkNet(row) {
+                if (this.editRemarkIds.indexOf(row.id) >= 0) {
+                    return;
+                }
+                this.editRemarkIds.push(row.id);
+                httpUtils.post('/lb/lightsail/checkNet', {
+                    id: row.id,
+                    publicIpAddress: row.publicIpAddress
+                }, this.authConfig()).then(resp => {
+                    if (resp.data.statusCode !== '200') {
+                        this.$message.error(resp.data.message);
+                    } else {
+                        this.$message.success(resp.data.message);
+                    }
+                }).finally(() => {
+                    this.editRemarkIds = this.editRemarkIds.filter(id => id !== row.id);
+                });
+            },
+            openBatchExportForm(addPanel) {
+                const rows = this.dataList.filter(item => this.selectedIds.indexOf(item.id) >= 0);
+                this.exportFormVisible = true;
+
+                this.exportForm.remark = ""
+                if (rows.length < 1) {
+                    return
+                }
+                // 先对row进行分组
+                const rowMap = {}
+                rows.forEach(row => {
+                    const groupName = row.groupName ? row.groupName.split("@")[0] : 'null'
+                    const remark = groupName + '@aws ' + this.getZoneName(row.displayName) + ' ' + row.peiZhi
+                    console.log(remark)
+                    if (!rowMap.hasOwnProperty(remark)) {
+                        rowMap[remark] = []
+                    }
+                    rowMap[remark].push(row)
+                });
+                let i = 0;
+                const site = window.location.href.split('/lb/')[0];
+                for (const key in rowMap) {
+                    let rowArr = rowMap[key]
+                    const row0 = rowArr[0]
+                    const groupName = key.split('@')[0]
+                    const remark = key.split('@')[1]
+                    this.exportForm.remark += remark + '\n'
+                    this.exportForm.remark += rowArr.map(row => ('#' + row.id + ' ' + row.publicIpAddress)).join('\n');
+                    this.exportForm.remark += '\n|22|' + row0.username + '|' + row0.password + '\n';
+                    this.exportForm.remark += '到期时间：' + this.formatDate(row0.outTime);
+                    if (addPanel && 'null' !== groupName) {
+                        this.exportForm.remark += '\n\n面板：' + site + '/lb/' + groupName;
+                    }
+                    i++;
+                    if (i < Object.keys(rowMap).length) {
+                        this.exportForm.remark += '\n\n';
+                    }
+                }
+            },
+            exportLightsail() {
+                const textarea = document.getElementById('exportTextarea');
+                textarea.select();
+                try {
+                    const success = document.execCommand('copy');
+                    if (success) {
+                        this.$message.success('复制成功');
+                    } else {
+                        this.$message.error('复制失败，请手动复制');
+                    }
+                } catch (err) {
+                    this.$message.error('复制失败，请手动复制');
+                }
+            }
+        }
+    })
+</script>
+
+<style lang="scss" scoped>
+    #lb-lightsail {
+        min-height: 100vh;
+        padding-bottom: 24px;
+        color: #303133;
+    }
+
+    .note-block > .el-input > .el-input__inner {
+        height: 28px;
+    }
+
+    .box-card {
+        background: #ffffff;
+        border-radius: 10px;
+        border: 1px solid #ebeef5;
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .card-header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .card-title {
+        font-weight: 700;
+    }
+
+    .text.item {
+        line-height: 28px;
+        font-size: 13px;
+        word-break: break-all;
+    }
+
+    .copy-ip {
+        color: #409EFF;
+        cursor: pointer;
+    }
+
+    .copy-ip:hover {
+        text-decoration: underline;
+    }
+
+    .fix-out-time-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .fix-out-time-row .el-date-editor.el-input {
+        width: 170px;
+    }
+
+    .back-to-top-btn {
+        position: fixed;
+        right: 16px;
+        bottom: 80px;
+        z-index: 1000;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border-radius: 4px;
+    }
+
+    .header-menu-btn {
+        min-width: 32px;
+    }
+
+    .theme-switch-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-width: 140px;
+    }
+
+    .action-popconfirm {
+        display: inline-block;
+    }
+
+    .action-popconfirm + .action-popconfirm,
+    .action-popconfirm + .el-button,
+    .el-button + .action-popconfirm {
+        margin-left: 10px;
+    }
+
+    body.dark-theme .el-dropdown-menu {
+        background-color: #2d2d2d !important;
+        border-color: #404040 !important;
+    }
+
+    body.dark-theme .el-dropdown-menu__item {
+        color: #e4e6ea !important;
+        background-color: #2d2d2d !important;
+    }
+
+    body.dark-theme .el-dropdown-menu__item:not(.is-disabled):hover,
+    body.dark-theme .el-dropdown-menu__item:focus {
+        background-color: #3a3a3a !important;
+        color: #ffffff !important;
+    }
+
+    body.dark-theme .el-dropdown-menu__item--divided:before {
+        background-color: #404040 !important;
+    }
+
+    body.dark-theme {
+        background-color: #14171c;
+        color: #e5eaf3;
+        min-height: 100vh;
+    }
+
+    body.dark-theme #lb-lightsail {
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-form,
+    body.dark-theme .el-row,
+    body.dark-theme .el-col,
+    body.dark-theme .el-divider,
+    body.dark-theme .el-divider__text,
+    body.dark-theme .el-empty__description p,
+    body.dark-theme .el-dialog__body,
+    body.dark-theme .el-dialog__footer,
+    body.dark-theme .el-checkbox__label,
+    body.dark-theme .el-switch__label,
+    body.dark-theme .theme-switch-row,
+    body.dark-theme .card-title,
+    body.dark-theme .note-label,
+    body.dark-theme .text.item,
+    body.dark-theme .text.item div,
+    body.dark-theme .el-button [class*="el-icon-"],
+    body.dark-theme .el-button span {
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-input__inner,
+    body.dark-theme .el-textarea__inner {
+        background-color: #20252d;
+        border-color: #394150;
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-input__inner::placeholder,
+    body.dark-theme .el-textarea__inner::placeholder {
+        color: #8d96a8;
+    }
+
+    body.dark-theme .el-input-group__append {
+        background-color: #20252d;
+        border-color: #394150;
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-card {
+        background-color: #1b2028;
+        border-color: #313846;
+        color: #e5eaf3;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    body.dark-theme .el-card__header {
+        background-color: #242a33;
+        border-bottom-color: #313846;
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-divider__text {
+        background-color: #14171c;
+        color: #c4ccda;
+    }
+
+    body.dark-theme .el-divider {
+        background-color: #2e3440;
+    }
+
+    body.dark-theme .el-empty__image svg {
+        fill: #4b5566;
+    }
+
+    body.dark-theme .el-button--primary {
+        background-color: #409eff;
+        border-color: #409eff;
+        color: #ffffff;
+    }
+
+    body.dark-theme .el-button--primary:hover,
+    body.dark-theme .el-button--primary:focus {
+        background-color: #66b1ff;
+        border-color: #66b1ff;
+        color: #ffffff;
+    }
+
+    body.dark-theme .el-button--default,
+    body.dark-theme .el-button--info,
+    body.dark-theme .el-button--warning,
+    body.dark-theme .el-button--success {
+        background-color: #20252d;
+        border-color: #394150;
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-button--default:hover,
+    body.dark-theme .el-button--info:hover,
+    body.dark-theme .el-button--warning:hover,
+    body.dark-theme .el-button--success:hover,
+    body.dark-theme .el-button--success:focus {
+        background-color: #2a313d;
+        border-color: #4a5568;
+        color: #ffffff;
+    }
+
+    body.dark-theme .el-button.is-plain.el-button--primary {
+        background-color: rgba(64, 158, 255, 0.14);
+        border-color: rgba(64, 158, 255, 0.45);
+        color: #8ec5ff;
+    }
+
+    body.dark-theme .el-button.is-plain.el-button--primary:hover,
+    body.dark-theme .el-button.is-plain.el-button--primary:focus {
+        background-color: rgba(64, 158, 255, 0.22);
+        border-color: rgba(64, 158, 255, 0.65);
+        color: #cfe6ff;
+    }
+
+    body.dark-theme .el-button.is-plain.el-button--success {
+        background-color: rgba(103, 194, 58, 0.14);
+        border-color: rgba(103, 194, 58, 0.42);
+        color: #8fdb69;
+    }
+
+    body.dark-theme .el-button.is-plain.el-button--success:hover,
+    body.dark-theme .el-button.is-plain.el-button--success:focus {
+        background-color: rgba(103, 194, 58, 0.22);
+        border-color: rgba(103, 194, 58, 0.58);
+        color: #d9f6c9;
+    }
+
+    body.dark-theme .el-button.is-plain.el-button--warning {
+        background-color: rgba(230, 162, 60, 0.14);
+        border-color: rgba(230, 162, 60, 0.42);
+        color: #f3c273;
+    }
+
+    body.dark-theme .el-button.is-plain.el-button--warning:hover,
+    body.dark-theme .el-button.is-plain.el-button--warning:focus {
+        background-color: rgba(230, 162, 60, 0.22);
+        border-color: rgba(230, 162, 60, 0.58);
+        color: #fde7bf;
+    }
+
+    body.dark-theme .el-button.is-plain.is-disabled,
+    body.dark-theme .el-button.is-disabled,
+    body.dark-theme .el-button.is-disabled:hover,
+    body.dark-theme .el-button.is-disabled:focus {
+        background-color: #1d222b;
+        border-color: #313846;
+        color: #6f7786;
+    }
+
+    body.dark-theme .el-checkbox__inner {
+        background-color: #20252d;
+        border-color: #4a5568;
+    }
+
+    body.dark-theme .el-checkbox__input.is-checked .el-checkbox__inner,
+    body.dark-theme .el-checkbox__input.is-indeterminate .el-checkbox__inner {
+        background-color: #409eff;
+        border-color: #409eff;
+    }
+
+    body.dark-theme .el-dialog {
+        background-color: #1b2028;
+        border: 1px solid #313846;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+    }
+
+    body.dark-theme .el-dialog__header {
+        background-color: #242a33;
+        border-bottom: 1px solid #313846;
+    }
+
+    body.dark-theme .el-dialog__title,
+    body.dark-theme .el-dialog__headerbtn .el-dialog__close {
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-dialog__headerbtn:hover .el-dialog__close {
+        color: #66b1ff;
+    }
+
+    body.dark-theme .v-modal {
+        background: rgba(5, 8, 13, 0.72);
+    }
+
+    body.dark-theme .el-popover,
+    body.dark-theme .el-popconfirm {
+        background-color: #1b2028;
+        border-color: #313846;
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-popover .popper__arrow,
+    body.dark-theme .el-popover .popper__arrow::after {
+        border-top-color: #1b2028 !important;
+        border-bottom-color: #1b2028 !important;
+    }
+
+    body.dark-theme .el-popconfirm__main {
+        color: #e5eaf3;
+    }
+
+    body.dark-theme .el-popconfirm__icon {
+        color: #e6a23c !important;
+    }
+</style>
+</body>
+</html>

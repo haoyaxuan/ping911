@@ -1,0 +1,46 @@
+a {
+    text-decoration: none
+}
+
+.el-table__header {
+    width: 100% !important;
+}
+
+.el-table__body {
+    width: 100% !important;
+}
+
+.drawer__footer {
+    display: flex;
+    margin: 10px;
+}
+
+.drawer__footer button {
+    flex: 1
+}
+
+.drawer__content {
+    display: flex;
+    flex-direction: column;
+    margin: 10px;
+}
+
+.drawer__content form {
+    flex: 1
+}
+
+.el-dropdown {
+    display: inline-block;
+    position: relative;
+    color: #fff;
+    font-size: 14px;
+}
+
+.el-menu-item a {
+    display: block;
+}
+
+.el-dropdown-menu a {
+    display: block;
+    color: #606266;
+}

@@ -1,0 +1,14 @@
+[Unit]
+Description=ping911 Service
+After=network.target
+Wants=network.target
+
+[Service]
+User=root
+Type=simple
+WorkingDirectory=/www/ping911
+ExecStart=/www/ping911/server
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -5,7 +5,7 @@
 ## 1. 提交工作流到 GitHub
 
 ```bash
-git add Dockerfile .dockerignore .github/workflows/build-docker-image.yml docs
+git add Dockerfile compose.yaml .dockerignore .github/workflows/build-docker-image.yml docs
 git commit -m "ci: add Docker image build workflow"
 git push
 ```
@@ -36,6 +36,14 @@ uname -m
 ```text
 ping911-sha-xxxxxxx-amd64.tar
 ping911-sha-xxxxxxx-amd64.tar.sha256
+compose.yaml
+config.yaml
+```
+
+部署前编辑下载得到的 `config.yaml`，填写一个随机且足够长的 Token：
+
+```yaml
+token: "替换为你的随机Token"
 ```
 
 ## 3. 使用版本标签自动构建
@@ -65,7 +73,7 @@ sha256sum -c ping911-sha-xxxxxxx-amd64.tar.sha256
 
 ```bash
 ssh root@服务器IP "mkdir -p /opt/ping911"
-scp ping911-sha-xxxxxxx-amd64.tar root@服务器IP:/opt/ping911/
+scp ping911-sha-xxxxxxx-amd64.tar compose.yaml config.yaml root@服务器IP:/opt/ping911/
 ```
 
 也可以使用 SFTP、宝塔面板或其他文件上传工具。
@@ -89,22 +97,20 @@ ping911:sha-xxxxxxx
 
 使用版本标签构建时，第二个标签为 `ping911:v1.0.0`。
 
-## 6. 启动容器
+## 6. 使用 Docker Compose 启动
+
+登录服务器后启动：
 
 ```bash
-docker run -d \
-  --name ping911 \
-  --restart unless-stopped \
-  --cap-add NET_RAW \
-  -p 9110:9110 \
-  ping911:latest
+cd /opt/ping911
+docker compose up -d
 ```
 
 检查容器：
 
 ```bash
-docker ps
-docker logs -f ping911
+docker compose ps
+docker compose logs -f ping911
 ```
 
 浏览器访问：
@@ -121,14 +127,7 @@ http://服务器IP:9110/
 
 ```bash
 docker load -i ping911-v1.0.1-amd64.tar
-docker stop ping911
-docker rm ping911
-docker run -d \
-  --name ping911 \
-  --restart unless-stopped \
-  --cap-add NET_RAW \
-  -p 9110:9110 \
-  ping911:latest
+docker compose up -d --force-recreate
 ```
 
 确认新容器正常运行后，可以清理不再使用的旧镜像：

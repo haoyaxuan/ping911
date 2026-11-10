@@ -65,6 +65,8 @@ jobs:
             --output "type=docker,dest=dist/${{ steps.meta.outputs.file_name }}" \
             .
 
+          cp compose.yaml dist/compose.yaml
+          cp config/config.example.yaml dist/config.yaml
           cd dist
           sha256sum "${{ steps.meta.outputs.file_name }}" > "${{ steps.meta.outputs.file_name }}.sha256"
 

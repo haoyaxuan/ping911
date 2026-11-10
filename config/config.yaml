@@ -3,3 +3,5 @@ address: "9110"
 logging:
   level: "info"
   file: "/www/ping911/logs/work.log"
+
+token: "KfB5OuiJMOkIHONp"

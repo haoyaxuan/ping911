@@ -1,0 +1,11 @@
+services:
+  ping911:
+    image: ping911:latest
+    container_name: ping911
+    restart: unless-stopped
+    cap_add:
+      - NET_RAW
+    ports:
+      - "9110:9110"
+    volumes:
+      - "./config.yaml:/app/config/config.yaml:ro"

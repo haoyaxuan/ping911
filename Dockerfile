@@ -21,7 +21,7 @@ RUN apk add --no-cache ca-certificates iputils
 WORKDIR /app
 
 COPY --from=builder /out/ping911 ./ping911
-COPY config/config.yaml ./config/config.yaml
+COPY config/config.example.yaml ./config/config.yaml
 
 EXPOSE 9110
 

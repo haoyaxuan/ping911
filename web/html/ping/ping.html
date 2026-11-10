@@ -25,6 +25,7 @@
         }
 
         button,
+        input,
         textarea {
             font: inherit;
         }
@@ -77,6 +78,36 @@
             margin: 0 0 24px;
             color: #667085;
             font-size: 14px;
+        }
+
+        .token-field {
+            margin-bottom: 16px;
+        }
+
+        .token-label {
+            display: block;
+            margin-bottom: 6px;
+            color: #344054;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .token-input {
+            display: block;
+            width: 100%;
+            height: 42px;
+            padding: 0 12px;
+            border: 1px solid #cbd2dc;
+            border-radius: 6px;
+            outline: none;
+            background: #ffffff;
+            color: #172033;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .token-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
         }
 
         textarea {
@@ -273,6 +304,11 @@
     <p class="subtitle">批量检测 IP 的网络可达性</p>
 
     <form id="pingForm">
+        <div class="token-field">
+            <label class="token-label" for="tokenInput">API Token</label>
+            <input id="tokenInput" class="token-input" name="token" type="password"
+                   autocomplete="off" placeholder="请输入 API Token">
+        </div>
         <label for="ipInput" hidden>IP 地址</label>
         <textarea id="ipInput" name="ips" spellcheck="false" autofocus
                   placeholder="每行输入一个 IP，例如：&#10;1.1.1.1&#10;8.8.8.8"></textarea>
@@ -294,6 +330,7 @@
 
 <script>
     const form = document.getElementById('pingForm');
+    const tokenInput = document.getElementById('tokenInput');
     const input = document.getElementById('ipInput');
     const button = document.getElementById('pingButton');
     const errorMessage = document.getElementById('errorMessage');
@@ -302,8 +339,15 @@
 
     form.addEventListener('submit', async function (event) {
         event.preventDefault();
+        const token = tokenInput.value.trim();
         const ips = input.value.trim();
         errorMessage.textContent = '';
+
+        if (!token) {
+            errorMessage.textContent = '请输入 API Token';
+            tokenInput.focus();
+            return;
+        }
 
         if (!ips) {
             errorMessage.textContent = '请输入至少一个 IP 地址';
@@ -313,9 +357,12 @@
 
         setLoading(true);
         try {
-            const response = await fetch('/api/ping', {
+            const response = await fetch('/api/v1/ping-checks', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({ips: ips})
             });
             const payload = await response.json();

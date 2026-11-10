@@ -9,5 +9,8 @@ func Init(e *echo.Echo) {
 	pingService := service.NewPingService()
 	e.GET("/", pingService.Panel)
 	e.GET("/ping", pingService.Panel)
-	e.POST("/api/ping", pingService.Check)
+
+	api := e.Group("/api", service.TokenAuth)
+	api.POST("/ping", pingService.Check)
+	api.POST("/v1/ping-checks", pingService.Check)
 }

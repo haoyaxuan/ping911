@@ -1,0 +1,7 @@
+address: "9110"
+
+logging:
+  level: "info"
+  file: "./logs/work.log"
+
+token: ""

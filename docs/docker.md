@@ -18,6 +18,7 @@ docker run -d \
   --restart unless-stopped \
   --cap-add NET_RAW \
   -p 9110:9110 \
+  -v /宿主机绝对路径/config.yaml:/app/config/config.yaml:ro \
   ping911:latest
 ```
 
@@ -35,7 +36,7 @@ docker logs -f ping911
 
 ## 使用外部配置
 
-需要覆盖端口或日志等级时，可以挂载配置文件。容器内配置路径必须保持为 `/app/config/config.yaml`：
+需要配置 API Token、覆盖端口或日志等级时，可以挂载配置文件。容器内配置路径必须保持为 `/app/config/config.yaml`：
 
 ```bash
 docker run -d \
@@ -54,7 +55,8 @@ docker run -d \
 ```bash
 curl http://127.0.0.1:9110/
 
-curl -X POST http://127.0.0.1:9110/api/ping \
+curl -X POST http://127.0.0.1:9110/api/v1/ping-checks \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{"ips":"1.1.1.1\n8.8.8.8"}'
 ```

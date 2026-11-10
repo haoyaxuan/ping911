@@ -13,6 +13,7 @@ var cfg *Config
 type Config struct {
 	Address string   `yaml:"address"`
 	Logging *Logging `yaml:"logging"`
+	Token   string   `yaml:"token"`
 }
 
 type Logging struct {
@@ -72,6 +73,7 @@ func defaults() {
 
 func Address() string { return cfg.Address }
 func Log() *Logging   { return cfg.Logging }
+func Token() string   { return cfg.Token }
 
 type LogLevel string
 

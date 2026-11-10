@@ -1,0 +1,11 @@
+.git
+.github
+.idea
+docs
+tests
+tmp
+logs
+*.exe
+*.iml
+*.log
+ping911.service

@@ -20,7 +20,7 @@ var htmlFS embed.FS
 
 type Template struct {
 	common    *template.Template
-	lby       *template.Template
+	ping      *template.Template
 	lightsail *template.Template
 }
 
@@ -47,7 +47,7 @@ func parseTemplates(name, leftDelim, rightDelim string, patterns ...string) (*te
 func (t *Template) Render(writer io.Writer, name string, data interface{}, context echo.Context) error {
 	switch name {
 	case "ping.html":
-		return t.lby.ExecuteTemplate(writer, name, data)
+		return t.ping.ExecuteTemplate(writer, name, data)
 	case "lightsail.html":
 		return t.lightsail.ExecuteTemplate(writer, "index.html", data)
 	}
@@ -62,7 +62,7 @@ func Init(e *echo.Echo) {
 	}))
 	e.Renderer = &Template{
 		common:    template.Must(parseTemplates("common", "", "", "html/common/*.html")),
-		lby:       template.Must(parseTemplates("ping.html", "[[[", "]]]", "html/ping/ping.html")),
+		ping:      template.Must(parseTemplates("ping.html", "[[[", "]]]", "html/ping/ping.html")),
 		lightsail: template.Must(parseTemplates("lightsail.html", "[[[", "]]]", "html/lightsail/index.html")),
 	}
 	e.StaticFS("/assets", echo.MustSubFS(assetsFS, "assets"))

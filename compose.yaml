@@ -8,4 +8,4 @@ services:
     ports:
       - "9110:9110"
     volumes:
-      - "./config.yaml:/app/config/config.yaml:ro"
+      - "./config:/app/config:ro"

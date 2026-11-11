@@ -336,6 +336,15 @@
     const errorMessage = document.getElementById('errorMessage');
     const results = document.getElementById('results');
     const resultList = document.getElementById('resultList');
+    const tokenStorageKey = 'ping911.apiToken';
+
+    tokenInput.value = loadSavedToken();
+
+    tokenInput.addEventListener('input', function () {
+        if (!tokenInput.value.trim()) {
+            clearSavedToken();
+        }
+    });
 
     form.addEventListener('submit', async function (event) {
         event.preventDefault();
@@ -367,8 +376,13 @@
             });
             const payload = await response.json();
             if (!response.ok || !payload.status) {
+                if (response.status === 401) {
+                    clearSavedToken();
+                    tokenInput.focus();
+                }
                 throw new Error(payload.message || 'Ping 检测失败');
             }
+            saveToken(token);
             renderResults(payload.data || []);
         } catch (error) {
             errorMessage.textContent = error.message || 'Ping 检测失败';
@@ -376,6 +390,30 @@
             setLoading(false);
         }
     });
+
+    function loadSavedToken() {
+        try {
+            return localStorage.getItem(tokenStorageKey) || '';
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function saveToken(token) {
+        try {
+            localStorage.setItem(tokenStorageKey, token);
+        } catch (error) {
+            // The request can still proceed when browser storage is unavailable.
+        }
+    }
+
+    function clearSavedToken() {
+        try {
+            localStorage.removeItem(tokenStorageKey);
+        } catch (error) {
+            // Ignore unavailable browser storage.
+        }
+    }
 
     function setLoading(loading) {
         button.disabled = loading;

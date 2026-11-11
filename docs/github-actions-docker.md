@@ -37,10 +37,10 @@ uname -m
 ping911-sha-xxxxxxx-amd64.tar
 ping911-sha-xxxxxxx-amd64.tar.sha256
 compose.yaml
-config.yaml
+config/config.yaml
 ```
 
-部署前编辑下载得到的 `config.yaml`，填写一个随机且足够长的 Token：
+部署前编辑下载得到的 `config/config.yaml`，填写一个随机且足够长的 Token：
 
 ```yaml
 token: "替换为你的随机Token"
@@ -73,7 +73,8 @@ sha256sum -c ping911-sha-xxxxxxx-amd64.tar.sha256
 
 ```bash
 ssh root@服务器IP "mkdir -p /opt/ping911"
-scp ping911-sha-xxxxxxx-amd64.tar compose.yaml config.yaml root@服务器IP:/opt/ping911/
+scp ping911-sha-xxxxxxx-amd64.tar compose.yaml root@服务器IP:/opt/ping911/
+scp -r config root@服务器IP:/opt/ping911/
 ```
 
 也可以使用 SFTP、宝塔面板或其他文件上传工具。
@@ -112,6 +113,21 @@ docker compose up -d
 docker compose ps
 docker compose logs -f ping911
 ```
+
+Compose 会将宿主机的 `./config` 目录只读挂载到容器的 `/app/config`。启动前确认 `config/config.yaml` 是普通文件而不是目录：
+
+```bash
+ls -ld config config/config.yaml
+```
+
+如果之前因为文件不存在而被 Docker 创建成了空目录，可以执行：
+
+```bash
+docker compose down
+rmdir config/config.yaml
+```
+
+然后从解压后的 GitHub Artifact 重新上传 `config/config.yaml`，或者在该路径创建配置文件后再启动容器。
 
 浏览器访问：
 

@@ -57,7 +57,7 @@ jobs:
       - name: Build Docker image archive
         shell: bash
         run: |
-          mkdir -p dist
+          mkdir -p dist/config
           docker buildx build \
             --platform "${{ steps.meta.outputs.platform }}" \
             --tag "ping911:latest" \
@@ -66,7 +66,7 @@ jobs:
             .
 
           cp compose.yaml dist/compose.yaml
-          cp config/config.example.yaml dist/config.yaml
+          cp config/config.example.yaml dist/config/config.yaml
           cd dist
           sha256sum "${{ steps.meta.outputs.file_name }}" > "${{ steps.meta.outputs.file_name }}.sha256"
 

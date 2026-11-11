@@ -8,4 +8,4 @@ services:
     ports:
       - "9110:9110"
     volumes:
-      - "./config:/app/config:ro"
+      - ""/vol2/1000/docker/ping911/config.yaml:/app/config/config.yaml:ro""
